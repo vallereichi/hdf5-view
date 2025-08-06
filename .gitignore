@@ -1,4 +1,6 @@
 .venv/
+uploaded_files/
+tests/
 assets/external/
 *.db
 .states
