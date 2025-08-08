@@ -1,14 +1,16 @@
 import reflex as rx
+import pandas as pd
+from typing import Any
 
 class HDF5_Group(rx.Base):
     """group model for hdf5 files"""
     name: str
     size: tuple[int, int]
-    dataset: dict
+    dataset: dict[str, Any]
 
 class HDF5_File(rx.Base):
     """class holding information about the hdf5 file"""
     filename: str
-    groups: list[str]
+    groups: list[HDF5_Group]
     attributes: list[str]
     metadata: dict

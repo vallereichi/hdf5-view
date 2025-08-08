@@ -1,6 +1,5 @@
 import reflex as rx
 from .states import FileTableState
-from .models import HDF5_File
 from typing import Callable
 
 
@@ -30,14 +29,42 @@ def show_filename() -> rx.Component:
         )
     )
 
-def table_component(show_item: Callable) -> rx.Component:
+def show_group() -> rx.Component:
+    """display the group name in a table cell"""
+    
+    return rx.cond(
+        FileTableState.hdf5_files,
+        rx.foreach(
+            FileTableState.hdf5_files[0].groups,
+            lambda group: rx.table.row(
+                rx.table.cell(group.name),
+                rx.table.cell(f"shape: {group.size[0]} x {group.size[1]}", text_align="end")
+            ),
+        ),
+        rx.text("")
+    )
+
+def show_keys() -> rx.Component:
+    """display the keys of a group"""
+    return rx.cond(
+        FileTableState.hdf5_files,
+        rx.foreach(
+            FileTableState.hdf5_files[0].groups[0].dataset.keys(),
+            lambda key: rx.table.row(
+                rx.table.cell(key)
+            )
+        ),
+        rx.text("")
+    )
+
+def table_component(header: str, show_item: Callable) -> rx.Component:
     """create a table component to display the various item attributes. Here an item can be any model which is defined elsewhere"""
 
     return rx.vstack(
             rx.table.root(
                 rx.table.header(
                     rx.table.row(
-                        rx.table.column_header_cell("Filename"),
+                        rx.table.column_header_cell(header),
                         ),
                     ),
                 rx.table.body(
@@ -45,6 +72,5 @@ def table_component(show_item: Callable) -> rx.Component:
                 ),
                 width="100%",
             ),
-            rx.button("clear", on_click=FileTableState.clear_table()),
             width="100%",
         )
