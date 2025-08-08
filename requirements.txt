@@ -1,2 +1,3 @@
 h5py
+pandas
 reflex==0.8.5
