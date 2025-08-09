@@ -1,3 +1,7 @@
+"""
+helper functions to extract data from hdf5 files
+"""
+
 import h5py
 import pandas as pd
 from .models import HDF5_File, HDF5_Group

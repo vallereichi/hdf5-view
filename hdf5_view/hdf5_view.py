@@ -1,3 +1,7 @@
+"""
+Entry point
+"""
+
 import reflex as rx
 from .states import FileTableState
 from .components import upload_component, table_component

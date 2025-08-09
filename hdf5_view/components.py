@@ -1,6 +1,10 @@
+"""
+components
+"""
+
+from typing import Callable
 import reflex as rx
 from .states import FileTableState
-from typing import Callable
 
 
 def upload_component() -> rx.Component:
@@ -31,7 +35,7 @@ def show_filename() -> rx.Component:
 
 def show_group() -> rx.Component:
     """display the group name in a table cell"""
-    
+
     return rx.cond(
         FileTableState.hdf5_files,
         rx.foreach(
@@ -73,4 +77,4 @@ def table_component(header: str, show_item: Callable) -> rx.Component:
                 width="100%",
             ),
             width="100%",
-        )
+    )
