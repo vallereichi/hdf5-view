@@ -14,7 +14,7 @@ def read_hdf5(file_path: str) -> HDF5_File:
     def extract_datasets(file: h5py.File) -> list[HDF5_Group]:
         """extract datasets/groups from the hdf5 file"""
         groups = []
-        for idx, group in enumerate(file.keys()):
+        for _, group in enumerate(file.keys()):
             data_dict = {}
             for key in file[group].keys():
                 data_dict[key] = file[group][key][:]

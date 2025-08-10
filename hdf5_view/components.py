@@ -28,8 +28,23 @@ def show_filename() -> rx.Component:
     """Display the hdf5 file information"""
     return rx.foreach(
         FileTableState.hdf5_files,
-        lambda hdf5: rx.table.row(
-           rx.table.cell(hdf5.filename)
+        lambda hdf5, index: rx.table.row(
+            rx.table.cell(
+                rx.link(
+                    hdf5.filename,
+                    href="/hdf5/"
+                ),
+            ),
+            on_click=lambda: FileTableState.select_file(index),
+            style={
+                "border": "2px solid transparent",
+                "cursor": "pointer"
+                    },
+            _hover={
+                "background": "#222",
+                "border-radius": "0.5em",
+                "cursor": "pointer"
+            },
         )
     )
 
@@ -39,10 +54,20 @@ def show_group() -> rx.Component:
     return rx.cond(
         FileTableState.hdf5_files,
         rx.foreach(
-            FileTableState.hdf5_files[0].groups,
-            lambda group: rx.table.row(
+            FileTableState.hdf5_files[FileTableState.selected_file_idx].groups,
+            lambda group, index: rx.table.row(
                 rx.table.cell(group.name),
-                rx.table.cell(f"shape: {group.size[0]} x {group.size[1]}", text_align="end")
+                rx.table.cell(f"{group.size[1]} x {group.size[0]}", text_align="end"),
+                on_click=lambda: FileTableState.select_group(index),
+                style={
+                            "border": "2px solid transparent",
+                            "cursor": "pointer"
+                    },
+                _hover={
+                        "background": "#222",
+                        "border-radius": "0.5em",
+                        "cursor": "pointer"
+                }
             ),
         ),
         rx.text("")
@@ -53,28 +78,45 @@ def show_keys() -> rx.Component:
     return rx.cond(
         FileTableState.hdf5_files,
         rx.foreach(
-            FileTableState.hdf5_files[0].groups[0].dataset.keys(),
-            lambda key: rx.table.row(
-                rx.table.cell(key)
-            )
-        ),
+                FileTableState.hdf5_files[FileTableState.selected_file_idx].groups[FileTableState.selected_group_idx].dataset.keys(),
+                lambda key: rx.table.row(
+                    rx.table.cell(
+                        key,
+                        style={
+                            "border": "2px solid transparent",
+                            "cursor": "pointer",
+                            "width": "100%"
+                        },
+                        _hover={
+                            "background": "#222",
+                            "border-radius": "0.5em",
+                            "cursor": "pointer"
+                        }
+                    )
+                )
+            ),
         rx.text("")
     )
 
-def table_component(header: str, show_item: Callable) -> rx.Component:
+
+def table_component(headers: list[str], show_item: Callable, **kwargs) -> rx.Component:
     """create a table component to display the various item attributes. Here an item can be any model which is defined elsewhere"""
 
     return rx.vstack(
             rx.table.root(
                 rx.table.header(
                     rx.table.row(
-                        rx.table.column_header_cell(header),
-                        ),
-                    ),
+                        rx.foreach(
+                            headers,
+                            lambda header: rx.table.column_header_cell(header)
+                        )
+                    )
+                ),
                 rx.table.body(
                     show_item()
                 ),
                 width="100%",
             ),
             width="100%",
+            **kwargs
     )
