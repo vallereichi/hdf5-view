@@ -52,9 +52,9 @@ def show_group() -> rx.Component:
     """display the group name in a table cell"""
 
     return rx.cond(
-        FileTableState.hdf5_files,
+        FileTableState.groups,
         rx.foreach(
-            FileTableState.hdf5_files[FileTableState.selected_file_idx].groups,
+            FileTableState.groups,
             lambda group, index: rx.table.row(
                 rx.table.cell(group.name),
                 rx.table.cell(f"{group.size[1]} x {group.size[0]}", text_align="end"),
@@ -76,9 +76,9 @@ def show_group() -> rx.Component:
 def show_keys() -> rx.Component:
     """display the keys of a group"""
     return rx.cond(
-        FileTableState.hdf5_files,
+        FileTableState.filtered_keys,
         rx.foreach(
-                FileTableState.hdf5_files[FileTableState.selected_file_idx].groups[FileTableState.selected_group_idx].dataset.keys(),
+                FileTableState.filtered_keys,
                 lambda key: rx.table.row(
                     rx.table.cell(
                         key,

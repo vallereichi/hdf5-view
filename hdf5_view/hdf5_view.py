@@ -39,7 +39,11 @@ def hdf5() -> rx.Component:
         rx.vstack(
             rx.hstack(
                 rx.link(rx.icon_button("arrow_big_left"), href="/", position="top-left"),
-                rx.heading(FileTableState.hdf5_files[FileTableState.selected_file_idx].filename),
+                rx.cond(
+                    FileTableState.selected_file_idx >= 0,
+                    rx.heading(FileTableState.hdf5_files[FileTableState.selected_file_idx].filename),
+                    rx.heading("No file selected")
+                )
             ),
             rx.vstack(
 
@@ -52,7 +56,7 @@ def hdf5() -> rx.Component:
                     FileTableState.selected_group_idx >= 0,
                     rx.vstack(
                         rx.hstack(
-                            rx.input(placeholder="search .."),
+                            rx.input(placeholder="search ..", on_change=lambda value: FileTableState.search_key(value)),
                             rx.button("clear", on_click=lambda: FileTableState.clear_group_selection())
                         ),
                         table_component(
