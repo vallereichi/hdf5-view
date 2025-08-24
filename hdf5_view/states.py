@@ -4,6 +4,7 @@ states
 
 import re
 import reflex as rx
+import matplotlib.pyplot as plt
 from .models import HDF5_File, HDF5_Group
 from .util import read_hdf5
 
@@ -68,3 +69,19 @@ class FileTableState(rx.State):
         """clear the group selection"""
         self.selected_group_idx = -1
         self.filtered_keys = []
+
+
+
+class PlotState(rx.State):
+    """State containing all the information about a plot"""
+    parameters_to_plot: list[str] = []
+    parameter_data: list
+
+    @rx.event
+    def add_parameter(self, paramter: str):
+        self.parameters_to_plot.append(paramter)
+
+    @rx.event
+    def clear_parameters(self):
+        self.parameters_to_plot = []
+

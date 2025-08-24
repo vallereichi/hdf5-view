@@ -3,9 +3,12 @@ Entry point
 """
 
 import reflex as rx
-from .states import FileTableState
-from .components import upload_component, table_component
+from reflex_pyplot import pyplot
+import matplotlib.pyplot as plt
+from .states import FileTableState, PlotState
+from .components import show_parameters, upload_component, table_component
 from .components import show_filename, show_group, show_keys
+from .util import create_plot
 
 
 
@@ -82,6 +85,49 @@ def hdf5() -> rx.Component:
         )
     )
 
+
+
+
+def plot() -> rx.Component:
+    return rx.container(
+        rx.color_mode.button(position="top-right"),
+        rx.vstack(
+            rx.hstack(
+                rx.link(
+                        rx.icon_button("arrow_big_left"),
+                        on_click=PlotState.clear_parameters(),
+                        href="/hdf5", position="top-left",
+                    ),
+                rx.heading("Back")
+            ),
+            table_component(["Parameters"], show_parameters),
+            rx.cond(
+                PlotState.parameters_to_plot,
+                rx.card(
+                    pyplot(
+                        create_plot(
+                            PlotState.parameters_to_plot),
+                        # width="100%",
+                        # height="400px",
+                    ),
+                    width="100%",
+                ),
+                rx.text("nothing to see here")
+            ),
+            rx.text(FileTableState.groups[FileTableState.selected_group_idx].dataframe),
+            padding_top="1.5em",
+            spacing="9",
+            justify="start",
+            min_height="85vh",
+            max_height="85vh",
+
+        )
+    )
+
+
+
+
 app = rx.App()
 app.add_page(index)
 app.add_page(hdf5)
+app.add_page(plot)

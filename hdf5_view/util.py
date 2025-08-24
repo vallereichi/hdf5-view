@@ -4,6 +4,8 @@ helper functions to extract data from hdf5 files
 
 import h5py
 import pandas as pd
+import matplotlib.pyplot as plt
+from typing import Any
 from .models import HDF5_File, HDF5_Group
 
 
@@ -19,7 +21,7 @@ def read_hdf5(file_path: str) -> HDF5_File:
             for key in file[group].keys():
                 data_dict[key] = file[group][key][:]
             dataframe = pd.DataFrame(data=data_dict)
-            groups.append(HDF5_Group(name=str(group), size=dataframe.shape, dataset=data_dict))
+            groups.append(HDF5_Group(name=str(group), size=dataframe.shape, dataset=data_dict, dataframe=dataframe))
         return groups
 
     with h5py.File(file_path, 'r') as f:
@@ -29,3 +31,10 @@ def read_hdf5(file_path: str) -> HDF5_File:
 
         hdf5.groups = extract_datasets(f)
     return hdf5
+
+
+def create_plot(parameters: list[str]):
+    fig = plt.figure(figsize=(7,5))
+    ax = fig.add_subplot(111)
+    plt.close(fig)
+    return fig

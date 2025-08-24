@@ -4,7 +4,7 @@ components
 
 from typing import Callable
 import reflex as rx
-from .states import FileTableState
+from .states import FileTableState, PlotState
 
 
 def upload_component() -> rx.Component:
@@ -82,6 +82,7 @@ def show_keys() -> rx.Component:
                 lambda key: rx.table.row(
                     rx.table.cell(
                         key,
+                        on_click=PlotState.add_parameter(key),
                         style={
                             "border": "2px solid transparent",
                             "cursor": "pointer",
@@ -92,10 +93,24 @@ def show_keys() -> rx.Component:
                             "border-radius": "0.5em",
                             "cursor": "pointer"
                         }
-                    )
+                    ),
+                on_click=rx.redirect("plot"),
                 )
             ),
         rx.text("")
+    )
+
+def show_parameters() -> rx.Component:
+    """display all selected parameters"""
+    return rx.cond(
+        PlotState.parameters_to_plot,
+        rx.foreach(
+            PlotState.parameters_to_plot,
+            lambda parameter: rx.table.row(
+                rx.table.cell(parameter)
+            ),
+        ),
+        rx.text("nothing to see here")
     )
 
 
