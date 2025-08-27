@@ -26,6 +26,7 @@ class FileState(rx.State):
         """remove all uploaded files"""
         self.uploaded_files = []
         HDF5State.group_list = []
+        HDF5State.dataset_list = []
 
 
 class HDF5State(rx.State):
@@ -33,7 +34,12 @@ class HDF5State(rx.State):
     file_name: str
     group_list: list[str]
     dataset_list: list[str]
-    selected_group_idx: int = -1
+
+    @rx.event
+    def clear(self):
+        self.file_name = ""
+        self.group_list = []
+        self.dataset_list = []
 
     def find_groups(self, file_path: str, group: str | None = None, group_list: list[str] | None = None) -> list[str]:
         """
@@ -340,7 +346,7 @@ def hdf5() -> rx.Component:
         rx.vstack(
             rx.hstack(
                 rx.link(
-                    rx.icon_button("arrow_big_left"),
+                    rx.icon_button("arrow_big_left", on_click=HDF5State.clear()),
                     href="/", position="top-left",
                     ),
                 rx.heading("Back")
