@@ -187,10 +187,11 @@ def upload_component() -> rx.Component:
             border="2px dashed #ccc",
             border_radius="1em",
             justify="center",
-            width="69vw",
+            width="100%",
             padding="2em",
             on_drop=FileState.handle_upload(rx.upload_files(upload_id="file_upload"))
-        )
+        ),
+        width="100%",
     )
 
 def display_files() -> rx.Component:
