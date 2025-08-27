@@ -14,8 +14,8 @@ to see the Datasets inside.
 
 ![showcase gif](assets/showcase.gif)
 
-- [] Implement pattern search for the file structure
-- [] Implement other types of plots
-- [] add support for more parameters/datasets
-- [] make filtering the datasets accessible
-- [] plot customization from the UI
+- [ ] Implement pattern search for the file structure
+- [ ] Implement other types of plots
+- [ ] add support for more parameters/datasets
+- [ ] make filtering the datasets accessible
+- [ ] plot customization from the UI
