@@ -19,3 +19,23 @@ to see the Datasets inside.
 - [ ] add support for more parameters/datasets
 - [ ] make filtering the datasets accessible
 - [ ] plot customization from the UI
+
+
+## Installation
+
+To get going just execute the following commands. This will host the webpage at `http://localhost:3000`.
+
+```
+git clone https://github.com/vallereichi/hdf5-view.git
+cd hdf5-view
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+reflex init
+```
+
+And then to run just
+
+```
+reflex run
+```
