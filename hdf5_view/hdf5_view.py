@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
@@ -34,12 +35,22 @@ class HDF5State(rx.State):
     file_name: str
     group_list: list[str]
     dataset_list: list[str]
+    filtered_datasets: list[str]
 
     @rx.event
     def clear(self):
         self.file_name = ""
         self.group_list = []
         self.dataset_list = []
+
+    def filter_datasets(self, search_key: str):
+        if search_key == "":
+            self.filtered_datasets = self.dataset_list
+            return
+        pattern = re.compile(search_key)
+        tmp = [dset for dset in self.dataset_list if pattern.search(dset)]
+        self.filtered_datasets = tmp
+
 
     def find_groups(self, file_path: str, group: str | None = None, group_list: list[str] | None = None) -> list[str]:
         """
@@ -119,6 +130,7 @@ class HDF5State(rx.State):
     def load_group(self, group_idx: int):
         group: str = self.group_list[group_idx]
         self.dataset_list = self.find_datasets(os.path.join(rx.get_upload_dir(), self.file_name), group)
+        self.filtered_datasets = self.dataset_list
 
     @rx.event
     def clear_group_list(self):
@@ -147,6 +159,12 @@ class PlotState(rx.State):
             data = data[mask]
         except:
             pass
+
+        try:
+            data = data[data != -1]
+        except:
+            pass
+
         self.parameter_data.append(data)
 
     @rx.var
@@ -293,7 +311,7 @@ def display_dataset_table() -> rx.Component:
         HDF5State.dataset_list,
         rx.vstack(
             rx.hstack(
-                rx.input(placeholder="search .."), #add search functionality here
+                rx.input(placeholder="search ..", on_change=lambda search_key: HDF5State.filter_datasets(search_key)),
                 rx.button("clear", on_click=HDF5State.clear_dataset_list()),
                 justify="between",
                 width="100%"
@@ -306,7 +324,7 @@ def display_dataset_table() -> rx.Component:
                 ),
                 rx.table.body(
                     rx.foreach(
-                        HDF5State.dataset_list,
+                        HDF5State.filtered_datasets,
                         lambda dset, index: rx.table.row(
                             rx.table.cell(
                                 dset,
@@ -399,8 +417,18 @@ def display_plot() -> rx.Component:
     return rx.cond(
         PlotState.parameters_to_plot,
         rx.card(
-            pyplot(
-                PlotState.create_plot
+            rx.hstack(
+                pyplot(
+                    PlotState.create_plot
+                ),
+                rx.vstack(
+                    rx.button(
+                        "+ add parameter",
+                    ),
+                    rx.button(
+                        "+ add scan",
+                    ),
+                )
             ),
             width="100%",
         )
