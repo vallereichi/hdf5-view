@@ -142,12 +142,28 @@ class HDF5State(rx.State):
 
 
 
+
 class PlotState(rx.State):
     """State containing all the information about a plot"""
     file_name_list: list[str] = []
     parameters_to_plot: list[str] = []
     parameter_data: list[np.ndarray]
     index_list: list[int] = [0]
+
+
+    @rx.event
+    def filter_data(self, index: int, filter_condition: str, dataset_list: list[str]):
+        """filter a dataset for a given condition"""
+        parameter_name = [dset for dset in dataset_list if dset in filter_condition][0]
+        file: h5py.File = h5py.File(os.path.join(rx.get_upload_dir(), self.file_name_list[index]))
+        filter_data = file[parameter_name][:]
+        try:
+            filter_data = filter_data[filter_data != -1]
+        except:
+            pass
+        print(parameter_name)
+        print(filter_data)
+
 
 
     def load_parameter_data(self, file_path):
@@ -421,6 +437,7 @@ def display_parameter_table() -> rx.Component:
                                 rx.hstack(
                                     rx.button(
                                         "+ add filter",
+                                        on_click=PlotState.filter_data(index, "/MSSM/SP_Ab", HDF5State.dataset_list)
                                     ),
                                     rx.cond(
                                         PlotState.index_list.contains(index),
