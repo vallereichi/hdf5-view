@@ -144,8 +144,11 @@ class HDF5State(rx.State):
 
 class PlotState(rx.State):
     """State containing all the information about a plot"""
+    file_name_list: list[str] = []
     parameters_to_plot: list[str] = []
     parameter_data: list[np.ndarray]
+    index_list: list[int] = [0]
+
 
     def load_parameter_data(self, file_path):
         file: h5py.File = h5py.File(file_path, 'r')
@@ -173,16 +176,17 @@ class PlotState(rx.State):
         ax = fig.add_subplot(111)
         labels = []
 
-        for data in self.parameter_data:
-            counts, bins, _ = ax.hist(data, bins=50, density=True, color='rebeccapurple', linewidth=1.5, alpha=0.7, histtype='step')
 
-            max_index = np.argmax(counts)
-            max_bin_center = (bins[max_index] + bins[max_index + 1]) / 2
-            label = f'max: {max_bin_center:.2f}'
-            labels.append(label)
-
-        ax.legend(labels)
         if len(self.parameters_to_plot) > 0:
+            for idx in self.index_list:
+                counts, bins, _ = ax.hist(self.parameter_data[idx], bins=50, density=True, color='rebeccapurple', linewidth=1.5, alpha=0.7, histtype='step')
+
+                max_index = np.argmax(counts)
+                max_bin_center = (bins[max_index] + bins[max_index + 1]) / 2
+                label = f'max: {max_bin_center:.2f}'
+                labels.append(label)
+
+            ax.legend(labels)
             ax.text(0.05, 0.95, s="$n_{valid}$ = " + f"{len(self.parameter_data[0])}",transform=ax.transAxes, ha='left', va='top')
             ax.set_xlabel(self.parameters_to_plot[0].split('::')[-1])
         ax.set_ylabel("counts")
@@ -192,9 +196,22 @@ class PlotState(rx.State):
 
 
     @rx.event
-    def add_parameter(self, paramter: str, file_name: str):
-        self.parameters_to_plot.append(paramter)
+    def add_parameter(self, parameter: str, file_name: str):
+        self.parameters_to_plot.append(parameter)
+        self.file_name_list.append(file_name)
         self.load_parameter_data(file_path=os.path.join(rx.get_upload_dir(), file_name))
+
+    @rx.event
+    def show_parameter(self, index: int):
+        if index not in self.index_list:
+            self.index_list.append(index)
+
+    @rx.event
+    def hide_parameter(self, index: int):
+        if index in self.index_list:
+            del self.index_list[index]
+        if not self.index_list:
+            self.index_list = [0]
 
     @rx.event
     def clear_parameters(self):
@@ -397,9 +414,29 @@ def display_parameter_table() -> rx.Component:
             rx.table.body(
                 rx.foreach(
                     PlotState.parameters_to_plot,
-                    lambda parameter: rx.table.row(
+                    lambda parameter, index: rx.table.row(
                         rx.table.cell(
-                            parameter,
+                            rx.hstack(
+                                parameter,
+                                rx.hstack(
+                                    rx.button(
+                                        "+ add filter",
+                                    ),
+                                    rx.cond(
+                                        PlotState.index_list.contains(index),
+                                        rx.button(
+                                            "hide",
+                                            on_click=PlotState.hide_parameter(index),
+                                        ),
+                                        rx.button(
+                                            "show",
+                                            on_click=PlotState.show_parameter(index),
+                                        )
+                                    ),
+                                ),
+                                justify="between",
+                                align="center",
+                            )
                         )
                     )
                 )
@@ -424,6 +461,7 @@ def display_plot() -> rx.Component:
                 rx.vstack(
                     rx.button(
                         "+ add parameter",
+                        on_click=rx.redirect("/hdf5")
                     ),
                     rx.button(
                         "+ add scan",
