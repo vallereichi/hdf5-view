@@ -1,6 +1,7 @@
 import os
 import re
 import numpy as np
+import numexpr as ne
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import reflex as rx
@@ -149,62 +150,78 @@ class PlotState(rx.State):
     parameters_to_plot: list[str] = []
     parameter_data: list[np.ndarray]
     index_list: list[int] = [0]
+    base_filter: list[bool]
 
 
     @rx.event
     def filter_data(self, index: int, filter_condition: str, dataset_list: list[str]):
         """filter a dataset for a given condition"""
-        parameter_name = [dset for dset in dataset_list if dset in filter_condition][0]
+
+
+        parameter_name = [dset for dset in dataset_list if dset.split('/')[-1] in filter_condition][0] # TODO: check for multiple occurances
+        if not parameter_name:
+            raise ValueError("could not find the dataset provided by the filter")
+
         file: h5py.File = h5py.File(os.path.join(rx.get_upload_dir(), self.file_name_list[index]))
         filter_data = file[parameter_name][:]
-        try:
-            filter_data = filter_data[filter_data != -1]
-        except:
-            pass
-        print(parameter_name)
-        print(filter_data)
+
+        safe_filter_condition = filter_condition.replace(parameter_name.split('/')[-1], 'x')
+
+        # apply the condition to the filter data and use it as a mask
+        mask = ne.evaluate(safe_filter_condition, local_dict={'x': filter_data})
+        if self.parameter_data[index].shape != filter_data.shape:
+            # reset filters by reloading original data
+            self.load_parameter_data(os.path.join(rx.get_upload_dir(), self.file_name_list[index]), index=index)
+
+        self.parameter_data[index] = self.parameter_data[index][mask]
 
 
-
-    def load_parameter_data(self, file_path):
+    def load_parameter_data(self, file_path, index: int = -1):
         file: h5py.File = h5py.File(file_path, 'r')
         try:
-            data: np.ndarray = file[self.parameters_to_plot[-1]][:]
+            data: np.ndarray = file[self.parameters_to_plot[index]][:]
         except:
-            raise KeyError(f"{self.parameters_to_plot[-1]} cannot be accessed from file {file_path}")
+            raise KeyError(f"{self.parameters_to_plot[index]} cannot be accessed from file {file_path}")
 
+        self.base_filter = [True] * len(data)
         try:
-            mask = file['MSSM']['LogLike_isvalid'][:].astype(bool)
-            data = data[mask]
+            self.base_filter = list(file['MSSM']['LogLike_isvalid'][:].astype(bool))
+            data = data[self.base_filter]
         except:
             pass
 
-        try:
-            data = data[data != -1]
-        except:
-            pass
+        # try:
+        #     self.base_filter = list(file['MSSM']["SP_m_W"][:] != -1)
+        #     data = data[self.base_filter]
+        # except:
+        #     pass
 
-        self.parameter_data.append(data)
+
+        if index != -1:
+            self.parameter_data[index] = data
+        else:
+            self.parameter_data.append(data)
 
     @rx.var
     def create_plot(self) -> Figure:
         fig = plt.figure(figsize=(7,5))
         ax = fig.add_subplot(111)
         labels = []
+        colors = ["rebeccapurple", "teal", "firebrick"]
 
 
         if len(self.parameters_to_plot) > 0:
             for idx in self.index_list:
-                counts, bins, _ = ax.hist(self.parameter_data[idx], bins=50, density=True, color='rebeccapurple', linewidth=1.5, alpha=0.7, histtype='step')
+                counts, bins, _ = ax.hist(self.parameter_data[idx], bins=50, density=True, color=colors[idx], linewidth=1.5, alpha=0.7, histtype='step')
 
                 max_index = np.argmax(counts)
                 max_bin_center = (bins[max_index] + bins[max_index + 1]) / 2
-                label = f'max: {max_bin_center:.2f}'
+                label = f'data_length={len(self.parameter_data[idx])}'
                 labels.append(label)
+                ax.set_xlabel(self.parameters_to_plot[idx].split('::')[-1])
 
             ax.legend(labels)
-            ax.text(0.05, 0.95, s="$n_{valid}$ = " + f"{len(self.parameter_data[0])}",transform=ax.transAxes, ha='left', va='top')
-            ax.set_xlabel(self.parameters_to_plot[0].split('::')[-1])
+            # ax.text(0.05, 0.95, s="$n_{valid}$ = " + f"{len(self.parameter_data[0])}",transform=ax.transAxes, ha='left', va='top')
         ax.set_ylabel("counts")
 
         plt.close(fig)
@@ -233,6 +250,7 @@ class PlotState(rx.State):
     def clear_parameters(self):
         self.parameters_to_plot = []
         self.parameter_data = []
+        self.index_list = [0]
 
 
 def upload_component() -> rx.Component:
@@ -437,7 +455,7 @@ def display_parameter_table() -> rx.Component:
                                 rx.hstack(
                                     rx.button(
                                         "+ add filter",
-                                        on_click=PlotState.filter_data(index, "/MSSM/SP_Ab", HDF5State.dataset_list)
+                                        on_click=PlotState.filter_data(index, "(GM2_Delta_gmuon != -1) & (GM2_Delta_gmuon < 2.35e-10)", HDF5State.dataset_list)
                                     ),
                                     rx.cond(
                                         PlotState.index_list.contains(index),
