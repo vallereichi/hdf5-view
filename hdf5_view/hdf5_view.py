@@ -1,3 +1,4 @@
+from logging import PlaceHolder
 import os
 import re
 import numpy as np
@@ -151,16 +152,27 @@ class PlotState(rx.State):
     parameter_data: list[np.ndarray]
     index_list: list[int] = [0]
     base_filter: list[bool]
+    filter_condition: str = ""
+
+
+    @rx.var
+    def enumerated_parameters(self) -> list[tuple[int, str]]:
+        return list(enumerate(self.parameters_to_plot))
 
 
     @rx.event
     def filter_data(self, index: int, filter_condition: str, dataset_list: list[str]):
         """filter a dataset for a given condition"""
 
+        print(filter_condition)
 
-        parameter_name = [dset for dset in dataset_list if dset.split('/')[-1] in filter_condition][0] # TODO: check for multiple occurances
+        print(index)
+
+        parameter_name = [dset for dset in dataset_list if dset.split('/')[-1] in filter_condition] # TODO: check for multiple occurances
         if not parameter_name:
             raise ValueError("could not find the dataset provided by the filter")
+
+        parameter_name = parameter_name[0]
 
         file: h5py.File = h5py.File(os.path.join(rx.get_upload_dir(), self.file_name_list[index]))
         filter_data = file[parameter_name][:]
@@ -433,6 +445,25 @@ def hdf5() -> rx.Component:
 
 
 
+def filter_form(index: int) -> rx.Component:
+    return rx.form(
+                rx.hstack(
+                    rx.input(
+                        placeholder="Dataset;Condition (e.g. error == 1)",
+                        width="85%",
+                        value=PlotState.filter_condition,
+                        on_change=lambda value: PlotState.set_filter_condition(value),
+                    ),
+                    rx.dialog.close(
+                        rx.button(
+                            "Submit",
+                            type="submit"
+                        )
+                    ),
+                ),
+                on_submit=lambda index=index: PlotState.filter_data(index, PlotState.filter_condition, HDF5State.dataset_list),
+                reset_on_submit=False,
+            )
 
 
 
@@ -447,25 +478,35 @@ def display_parameter_table() -> rx.Component:
             ),
             rx.table.body(
                 rx.foreach(
-                    PlotState.parameters_to_plot,
-                    lambda parameter, index: rx.table.row(
+                    PlotState.enumerated_parameters,
+                    lambda parameter_tuple: rx.table.row(
                         rx.table.cell(
                             rx.hstack(
-                                parameter,
+                                parameter_tuple[1],
                                 rx.hstack(
-                                    rx.button(
-                                        "+ add filter",
-                                        on_click=PlotState.filter_data(index, "(GM2_Delta_gmuon != -1) & (GM2_Delta_gmuon < 2.35e-10)", HDF5State.dataset_list)
+                                    rx.dialog.root(
+                                        rx.dialog.trigger(
+                                            rx.button(
+                                                "+ add filter",
+                                            )
+                                        ),
+                                        rx.dialog.content(
+                                            filter_form(index=parameter_tuple[0])
+                                        ),
                                     ),
+                                    # rx.button(
+                                    #     "+ add filter",
+                                    #     on_click=PlotState.filter_data(index, "(GM2_Delta_gmuon != -1) & (GM2_Delta_gmuon < 2.35e-10)", HDF5State.dataset_list)
+                                    # ),
                                     rx.cond(
-                                        PlotState.index_list.contains(index),
+                                        PlotState.index_list.contains(parameter_tuple[0]),
                                         rx.button(
                                             "hide",
-                                            on_click=PlotState.hide_parameter(index),
+                                            on_click=PlotState.hide_parameter(parameter_tuple[0]),
                                         ),
                                         rx.button(
                                             "show",
-                                            on_click=PlotState.show_parameter(index),
+                                            on_click=PlotState.show_parameter(parameter_tuple[0]),
                                         )
                                     ),
                                 ),
