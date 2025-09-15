@@ -161,31 +161,28 @@ class PlotState(rx.State):
 
 
     @rx.event
-    def filter_data(self, index: int, filter_condition: str, dataset_list: list[str]):
+    def filter_data(self, filter_condition: str, dataset_list: list[str]):
         """filter a dataset for a given condition"""
-
-        print(filter_condition)
-
-        print(index)
-
         parameter_name = [dset for dset in dataset_list if dset.split('/')[-1] in filter_condition] # TODO: check for multiple occurances
         if not parameter_name:
             raise ValueError("could not find the dataset provided by the filter")
 
         parameter_name = parameter_name[0]
-
-        file: h5py.File = h5py.File(os.path.join(rx.get_upload_dir(), self.file_name_list[index]))
-        filter_data = file[parameter_name][:]
-
         safe_filter_condition = filter_condition.replace(parameter_name.split('/')[-1], 'x')
 
-        # apply the condition to the filter data and use it as a mask
-        mask = ne.evaluate(safe_filter_condition, local_dict={'x': filter_data})
-        if self.parameter_data[index].shape != filter_data.shape:
-            # reset filters by reloading original data
-            self.load_parameter_data(os.path.join(rx.get_upload_dir(), self.file_name_list[index]), index=index)
+        file_name = ""
+        for idx in self.index_list:
+            if file_name != self.file_name_list[idx]:
+                file: h5py.File = h5py.File(os.path.join(rx.get_upload_dir(), self.file_name_list[idx]))
+            filter_data = file[parameter_name][:]
 
-        self.parameter_data[index] = self.parameter_data[index][mask]
+            # apply the condition to the filter data and use it as a mask
+            mask = ne.evaluate(safe_filter_condition, local_dict={'x': filter_data})
+            if self.parameter_data[idx].shape != filter_data.shape:
+                # reset filters by reloading original data
+                self.load_parameter_data(os.path.join(rx.get_upload_dir(), self.file_name_list[idx]), index=idx)
+
+            self.parameter_data[idx] = self.parameter_data[idx][mask]
 
 
     def load_parameter_data(self, file_path, index: int = -1):
@@ -248,15 +245,15 @@ class PlotState(rx.State):
 
     @rx.event
     def show_parameter(self, index: int):
+        # print("plot parameter with index: ", index)
         if index not in self.index_list:
             self.index_list.append(index)
 
     @rx.event
     def hide_parameter(self, index: int):
+        # print("index list: ", self.index_list)
         if index in self.index_list:
-            del self.index_list[index]
-        if not self.index_list:
-            self.index_list = [0]
+            self.index_list.remove(index)
 
     @rx.event
     def clear_parameters(self):
@@ -445,7 +442,7 @@ def hdf5() -> rx.Component:
 
 
 
-def filter_form(index: int) -> rx.Component:
+def filter_form() -> rx.Component:
     return rx.form(
                 rx.hstack(
                     rx.input(
@@ -461,7 +458,7 @@ def filter_form(index: int) -> rx.Component:
                         )
                     ),
                 ),
-                on_submit=lambda index=index: PlotState.filter_data(index, PlotState.filter_condition, HDF5State.dataset_list),
+                on_submit=lambda : PlotState.filter_data(PlotState.filter_condition, HDF5State.dataset_list),
                 reset_on_submit=False,
             )
 
@@ -478,11 +475,11 @@ def display_parameter_table() -> rx.Component:
             ),
             rx.table.body(
                 rx.foreach(
-                    PlotState.enumerated_parameters,
-                    lambda parameter_tuple: rx.table.row(
+                    PlotState.parameters_to_plot,
+                    lambda parameter, index: rx.table.row(
                         rx.table.cell(
                             rx.hstack(
-                                parameter_tuple[1],
+                                parameter,
                                 rx.hstack(
                                     rx.dialog.root(
                                         rx.dialog.trigger(
@@ -491,7 +488,7 @@ def display_parameter_table() -> rx.Component:
                                             )
                                         ),
                                         rx.dialog.content(
-                                            filter_form(index=parameter_tuple[0])
+                                            filter_form()
                                         ),
                                     ),
                                     # rx.button(
@@ -499,14 +496,14 @@ def display_parameter_table() -> rx.Component:
                                     #     on_click=PlotState.filter_data(index, "(GM2_Delta_gmuon != -1) & (GM2_Delta_gmuon < 2.35e-10)", HDF5State.dataset_list)
                                     # ),
                                     rx.cond(
-                                        PlotState.index_list.contains(parameter_tuple[0]),
+                                        PlotState.index_list.contains(index),
                                         rx.button(
                                             "hide",
-                                            on_click=PlotState.hide_parameter(parameter_tuple[0]),
+                                            on_click=PlotState.hide_parameter(index),
                                         ),
                                         rx.button(
                                             "show",
-                                            on_click=PlotState.show_parameter(parameter_tuple[0]),
+                                            on_click=PlotState.show_parameter(index),
                                         )
                                     ),
                                 ),
